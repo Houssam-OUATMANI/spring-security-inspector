@@ -59,17 +59,24 @@ export function analyzeJavaFile(sourceCode: string, file: vscode.Uri): FileAnaly
 
 	const routes = parseRoutes(cleanedText, file);
 	const endpoints = scanControllers(cleanedText, file);
+
+	// Rules that now return { findings, components }
+	const corsResult = checkCorsRules(cleanedText, file);
+	const sessionResult = checkSessionRules(cleanedText, file);
+
 	const components: SecurityComponent[] = [
 		...detectComponents(cleanedText, file),
 		...detectMethodSecurity(cleanedText, file),
+		...corsResult.components,
+		...sessionResult.components,
 	];
 
 	const rawFindings: SecurityFinding[] = [
 		...checkCsrfRules(cleanedText, file),
 		...checkCatchAllRules(cleanedText, file),
 		...checkPasswordEncoderRules(cleanedText, file),
-		...checkCorsRules(cleanedText, file),
-		...checkSessionRules(cleanedText, file),
+		...corsResult.findings,
+		...sessionResult.findings,
 	];
 
 	// Filter findings that have inline suppressions like // @ssi-ignore

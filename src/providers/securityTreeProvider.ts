@@ -128,10 +128,10 @@ export class SecurityTreeProvider implements vscode.TreeDataProvider<SecurityTre
 			findingDesc = 'All clear ✓';
 		} else {
 			const parts: string[] = [];
-			if (errCount > 0) parts.push(`${errCount} error${errCount > 1 ? 's' : ''}`);
-			if (warnCount > 0) parts.push(`${warnCount} warning${warnCount > 1 ? 's' : ''}`);
+			if (errCount > 0) {parts.push(`${errCount} error${errCount > 1 ? 's' : ''}`);}
+			if (warnCount > 0) {parts.push(`${warnCount} warning${warnCount > 1 ? 's' : ''}`);}
 			const infoCount = findingCount - errCount - warnCount;
-			if (infoCount > 0) parts.push(`${infoCount} info`);
+			if (infoCount > 0) {parts.push(`${infoCount} info`);}
 			findingDesc = parts.join(', ');
 		}
 
@@ -300,7 +300,7 @@ export class SecurityTreeProvider implements vscode.TreeDataProvider<SecurityTre
 			const md = new vscode.MarkdownString();
 			md.isTrusted = true;
 			md.appendMarkdown(`**${finding.ruleId}**`);
-			if (finding.cweId) md.appendMarkdown(` — [${finding.cweId}](https://cwe.mitre.org/data/definitions/${finding.cweId.replace('CWE-', '')}.html)`);
+			if (finding.cweId) {md.appendMarkdown(` — [${finding.cweId}](https://cwe.mitre.org/data/definitions/${finding.cweId.replace('CWE-', '')}.html)`);}
 			md.appendMarkdown(`\n\n${finding.message}\n\n`);
 			if (finding.recommendation) {
 				md.appendMarkdown(`> 💡 ${finding.recommendation}\n\n`);
@@ -354,7 +354,7 @@ export class SecurityTreeProvider implements vscode.TreeDataProvider<SecurityTre
 			const md = new vscode.MarkdownString();
 			md.appendMarkdown(`**${comp.name}**\n\n`);
 			md.appendMarkdown(`Type: \`${comp.type}\`\n\n`);
-			if (comp.details) md.appendMarkdown(`Details: ${comp.details}\n\n`);
+			if (comp.details) {md.appendMarkdown(`Details: ${comp.details}\n\n`);}
 			md.appendMarkdown(`*${comp.file.fsPath}:${comp.line}*`);
 
 			const item = new SecurityTreeItem(
@@ -395,7 +395,7 @@ export class SecurityTreeProvider implements vscode.TreeDataProvider<SecurityTre
 		return filterComponents.map(comp => {
 			const md = new vscode.MarkdownString();
 			md.appendMarkdown(`**${comp.name}**\n\n`);
-			if (comp.details) md.appendMarkdown(`${comp.details}\n\n`);
+			if (comp.details) {md.appendMarkdown(`${comp.details}\n\n`);}
 			md.appendMarkdown(`*${comp.file.fsPath}:${comp.line}*`);
 
 			const item = new SecurityTreeItem(
@@ -421,7 +421,7 @@ export class SecurityTreeProvider implements vscode.TreeDataProvider<SecurityTre
 		return methodComponents.map(comp => {
 			const md = new vscode.MarkdownString();
 			md.appendMarkdown(`**${comp.name}**\n\n`);
-			if (comp.details) md.appendMarkdown(`${comp.details}\n\n`);
+			if (comp.details) {md.appendMarkdown(`${comp.details}\n\n`);}
 			md.appendMarkdown(`*${comp.file.fsPath}:${comp.line}*`);
 
 			const item = new SecurityTreeItem(

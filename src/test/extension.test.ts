@@ -323,7 +323,7 @@ suite('Spring Security Inspector Test Suite', () => {
 				cors.setAllowedOrigins(List.of("*"));
 				cors.setAllowCredentials(true);
 			`;
-			const findings = checkCorsRules(corsCode, mockUri);
+			const { findings } = checkCorsRules(corsCode, mockUri);
 			assert.strictEqual(findings.length, 1);
 			assert.strictEqual(findings[0].ruleId, 'SPRING_SEC_CORS_WILDCARD_CREDENTIALS');
 		});
@@ -336,7 +336,7 @@ suite('Spring Security Inspector Test Suite', () => {
 					return http.build();
 				}
 			`;
-			const findings = checkSessionRules(code, mockUri);
+			const { findings } = checkSessionRules(code, mockUri);
 			assert.strictEqual(findings.length, 1);
 			assert.strictEqual(findings[0].ruleId, 'SPRING_SEC_JWT_MISSING_STATELESS_SESSION');
 		});

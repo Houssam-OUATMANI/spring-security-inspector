@@ -3,7 +3,7 @@
   "displayName": "Spring Security Inspector",
   "description": "Inspect Spring Security configuration and expose authorization risks.",
   "icon": "icon.png",
-  "version": "0.2.0",
+  "version": "0.1.0",
   "publisher": "Houssam-OUATMANI",
   "author": "Houssam OUATMANI",
   "license": "MIT",
@@ -35,7 +35,7 @@
         {
           "id": "spring-security-inspector",
           "title": "Spring Security",
-          "icon": "icon.png"
+          "icon": "icon.svg"
         }
       ]
     },
