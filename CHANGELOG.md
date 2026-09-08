@@ -2,7 +2,7 @@
 
 All notable changes to the "spring-security-inspector" extension will be documented in this file.
 
-## [0.2.0] - 2026-09-08
+## [0.1.0] - 2026-09-08
 
 ### Added
 - **Interactive Security Dashboard (Webview)**:
@@ -28,9 +28,6 @@ All notable changes to the "spring-security-inspector" extension will be documen
 - **Extended Test Suite**:
   - 17 unit and integration tests covering reconciliation, simulator, CORS, sessions, and suppressions.
 
-## [0.1.0] - 2026-09-08
-
-### Added
 - **Interactive TreeView**: Clickable items navigating directly to the exact file and line in the editor.
 - **Visual Design**: Themed icons and status badges for routes (`permitAll`, `authenticated`, `hasRole`, `hasAuthority`, `denyAll`).
 - **Comprehensive Route Parsing**: Full support for Spring Security 6 (`requestMatchers`, lambdas) and Spring Security 5 (`antMatchers`, `authorizeRequests`).
