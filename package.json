@@ -1,0 +1,136 @@
+{
+  "name": "spring-security-inspector",
+  "displayName": "Spring Security Inspector",
+  "description": "Inspect Spring Security configuration and expose authorization risks.",
+  "icon": "icon.png",
+  "version": "0.2.0",
+  "publisher": "Houssam-OUATMANI",
+  "author": "Houssam OUATMANI",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Houssam-OUATMANI/spring-security-inspector.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Houssam-OUATMANI/spring-security-inspector/issues"
+  },
+  "homepage": "https://github.com/Houssam-OUATMANI/spring-security-inspector#readme",
+  "activationEvents": [
+    "onLanguage:java",
+    "workspaceContains:**/pom.xml",
+    "workspaceContains:**/build.gradle",
+    "workspaceContains:**/build.gradle.kts"
+  ],
+  "engines": {
+    "vscode": "^1.136.0"
+  },
+  "categories": [
+    "Linters",
+    "Programming Languages"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "spring-security-inspector",
+          "title": "Spring Security",
+          "icon": "icon.png"
+        }
+      ]
+    },
+    "views": {
+      "spring-security-inspector": [
+        {
+          "id": "spring-security-overview",
+          "name": "Security Overview",
+          "icon": "icon.png"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "spring-security-inspector.refresh",
+        "title": "Spring Security: Refresh Analysis",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "spring-security-inspector.openDashboard",
+        "title": "Spring Security: Open Security Dashboard",
+        "icon": "$(dashboard)"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "spring-security-inspector.openDashboard",
+          "when": "view == spring-security-overview",
+          "group": "navigation@1"
+        },
+        {
+          "command": "spring-security-inspector.refresh",
+          "when": "view == spring-security-overview",
+          "group": "navigation@2"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Spring Security Inspector",
+      "properties": {
+        "springSecurityInspector.enableDiagnostics": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable or disable security diagnostics in the VS Code Problems panel."
+        },
+        "springSecurityInspector.scanOnSave": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically run security analysis when saving Java and build files."
+        },
+        "springSecurityInspector.enableCodeLens": {
+          "type": "boolean",
+          "default": true,
+          "description": "Display security summary CodeLens above SecurityFilterChain beans."
+        },
+        "springSecurityInspector.ignorePatterns": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "**/test/**"
+          ],
+          "description": "Glob patterns of paths to ignore during security analysis."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run package",
+    "compile": "webpack",
+    "watch": "webpack --watch",
+    "package": "webpack --mode production --devtool hidden-source-map",
+    "compile-tests": "tsc -p . --outDir out",
+    "watch-tests": "tsc -p . -w --outDir out",
+    "pretest": "npm run compile-tests && npm run compile && npm run lint",
+    "lint": "eslint src",
+    "test": "vscode-test"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.136.0",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "24.x",
+    "typescript-eslint": "^8.61.1",
+    "eslint": "^10.5.0",
+    "typescript": "^6.0.3",
+    "ts-loader": "^9.6.2",
+    "webpack": "^5.107.2",
+    "webpack-cli": "^7.0.3",
+    "@vscode/test-cli": "^0.0.15",
+    "@vscode/test-electron": "^3.0.0"
+  },
+  "overrides": {
+    "diff": "^8.0.4",
+    "serialize-javascript": "^7.0.6"
+  }
+}
