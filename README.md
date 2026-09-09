@@ -1,5 +1,7 @@
 # Spring Security Inspector
 
+Current release: **0.2.0**
+
 > **Static analysis for Spring Security configurations — directly in VS Code.**
 
 Inspect your Spring Security setup, reconcile controller endpoints with security rules, detect authorization vulnerabilities, and simulate access rights — all without leaving the editor.
@@ -14,8 +16,9 @@ Open the full-page dashboard with **`Spring Security: Open Security Dashboard`**
 
 - **KPI Cards** — Total security matchers, controller endpoints detected, findings by severity, Spring Security version.
 - **Access Control Matrix** — Cross-references every `@RestController` endpoint with its matched Spring Security rule. Filterable and searchable.
-- **Request Authorization Simulator** — Pick a method (`GET`, `POST`…), a path (`/api/admin/users`) and a role (`ROLE_USER`), and get an instant **ALLOWED / DENIED** verdict with the matched rule and reason. Runs entirely against your actual security configuration.
+- **Request Authorization Simulator** — Pick a method (`GET`, `POST`…), a path (`/api/admin/users`) and a role (`ROLE_USER`), and get an instant **ALLOWED / DENIED** verdict with the matched rule and reason. Custom expressions are marked **manual review required** instead of being assumed safe. Runs entirely against your actual security configuration.
 - **One-click Exports** — Generate a full audit report in **Markdown** or export raw data as **JSON**.
+- **CI Export** — Export findings as **SARIF** for GitHub Code Scanning and other CI security tools.
 - **Findings Tab** — All detected issues ranked by severity with CWE links and file locations.
 
 ---
@@ -65,6 +68,9 @@ The extension automatically reconciles your `@RestController` endpoints against 
 - Detects endpoints with **no explicit matcher** (potentially exposed via a catch-all).
 - Detects security matchers with **no matching controller** (dead configuration).
 - Supports **path variables** (`/users/{id}`), **wildcards** (`/api/**`), and multi-pattern matchers (`.requestMatchers("/a", "/b")`).
+- Accounts for method-level security annotations such as `@PreAuthorize`, `@Secured`, and `@RolesAllowed` when identifying protected endpoints.
+
+Custom `access(...)` expressions are reported as **manual review required** in the simulator because static analysis cannot safely determine their runtime result.
 
 ---
 
@@ -125,6 +131,7 @@ In VS Code settings (`settings.json`):
 |:---|:---|:---|
 | Spring Security: Open Security Dashboard | `spring-security-inspector.openDashboard` | Open the full dashboard with matrix and simulator |
 | Spring Security: Refresh Analysis | `spring-security-inspector.refresh` | Re-run the full workspace scan |
+| Spring Security: Export SARIF Report | `spring-security-inspector.exportSarif` | Export findings in SARIF format for CI tooling |
 
 ---
 

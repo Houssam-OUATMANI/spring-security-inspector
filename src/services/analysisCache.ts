@@ -5,6 +5,7 @@ import { SecurityRoute } from '../models/route';
 import { SecurityFinding } from '../models/finding';
 import { SecurityComponent } from '../models/component';
 import { ControllerEndpoint } from '../models/controller';
+import { extractSuppressions } from '../analyzer/suppressions';
 
 export class AnalysisCache {
 	private readonly cache = new Map<string, FileAnalysisResult>();
@@ -31,6 +32,7 @@ export class AnalysisCache {
 		const allFindings: SecurityFinding[] = [];
 		const allComponents: SecurityComponent[] = [];
 		const files: vscode.Uri[] = [];
+		const suppressionsByFile = new Map<string, ReturnType<typeof extractSuppressions>>();
 
 		for (const [uriStr, result] of this.cache.entries()) {
 			allRoutes.push(...result.routes);
@@ -38,10 +40,11 @@ export class AnalysisCache {
 			allFindings.push(...result.findings);
 			allComponents.push(...result.components);
 			files.push(vscode.Uri.parse(uriStr));
+			suppressionsByFile.set(uriStr, result.suppressions);
 		}
 
 		// Run cross-file rules (route shadowing, controller reconciliation, and properties audit)
-		const { crossFindings } = await analyzeCrossFileRules(allRoutes, allEndpoints);
+		const { crossFindings } = await analyzeCrossFileRules(allRoutes, allEndpoints, suppressionsByFile);
 		allFindings.push(...crossFindings);
 
 		return {

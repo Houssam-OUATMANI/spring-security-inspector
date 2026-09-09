@@ -17,7 +17,15 @@ export class DiagnosticManager {
 			findingsByFile.get(uriStr)!.push(finding);
 		}
 
+		const filesToUpdate = new Map<string, vscode.Uri>();
 		for (const file of scannedFiles) {
+			filesToUpdate.set(file.toString(), file);
+		}
+		for (const finding of findings) {
+			filesToUpdate.set(finding.file.toString(), finding.file);
+		}
+
+		for (const file of filesToUpdate.values()) {
 			const fileFindings = findingsByFile.get(file.toString()) || [];
 			const diagnostics: vscode.Diagnostic[] = fileFindings.map(finding => {
 				const startLine = Math.max(0, finding.line - 1);

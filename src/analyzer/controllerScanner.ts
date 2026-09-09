@@ -115,6 +115,10 @@ export function scanControllers(cleanedText: string, file: vscode.Uri): Controll
 			const afterAnnotation = classBody.slice(annotOffset + annotMatch[0].length, annotOffset + annotMatch[0].length + 400);
 			const methodNameMatch = /(?:public|protected|private)\s+[\w<>\[\],\s]+\s+([a-zA-Z0-9_]+)\s*\(/g.exec(afterAnnotation);
 			const methodName = methodNameMatch ? methodNameMatch[1] : 'endpoint';
+			const methodSecurityMatch = /@(PreAuthorize|PostAuthorize|Secured|RolesAllowed)\s*\(\s*((?:"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'))\s*\)/.exec(afterAnnotation);
+			const methodSecurity = methodSecurityMatch
+				? `@${methodSecurityMatch[1]}(${methodSecurityMatch[2].trim()})`
+				: undefined;
 
 			const absoluteOffset = classBodyStart + annotOffset;
 			const lineCol = offsetToLineColumn(cleanedText, absoluteOffset);
@@ -128,6 +132,7 @@ export function scanControllers(cleanedText: string, file: vscode.Uri): Controll
 					httpMethod,
 					path: '',
 					fullPath,
+					methodSecurity,
 					file,
 					line: lineCol.line,
 					column: lineCol.column,
@@ -141,6 +146,7 @@ export function scanControllers(cleanedText: string, file: vscode.Uri): Controll
 						httpMethod,
 						path: p,
 						fullPath,
+						methodSecurity,
 						file,
 						line: lineCol.line,
 						column: lineCol.column,

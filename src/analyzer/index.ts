@@ -39,6 +39,7 @@ export interface FileAnalysisResult {
 	endpoints: ControllerEndpoint[];
 	findings: SecurityFinding[];
 	components: SecurityComponent[];
+	suppressions: ReturnType<typeof extractSuppressions>;
 }
 
 /**
@@ -54,7 +55,7 @@ export function analyzeJavaFile(sourceCode: string, file: vscode.Uri): FileAnaly
 		);
 
 	if (!isRelevant) {
-		return { routes: [], endpoints: [], findings: [], components: [] };
+		return { routes: [], endpoints: [], findings: [], components: [], suppressions: extractSuppressions(sourceCode) };
 	}
 
 	const routes = parseRoutes(cleanedText, file);
@@ -83,7 +84,7 @@ export function analyzeJavaFile(sourceCode: string, file: vscode.Uri): FileAnaly
 	const suppressions = extractSuppressions(sourceCode);
 	const findings = filterSuppressedFindings(rawFindings, suppressions);
 
-	return { routes, endpoints, findings, components };
+	return { routes, endpoints, findings, components, suppressions };
 }
 
 /**
@@ -91,7 +92,8 @@ export function analyzeJavaFile(sourceCode: string, file: vscode.Uri): FileAnaly
  */
 export async function analyzeCrossFileRules(
 	routes: SecurityRoute[],
-	endpoints: ControllerEndpoint[]
+	endpoints: ControllerEndpoint[],
+	suppressionsByFile: Map<string, ReturnType<typeof extractSuppressions>> = new Map()
 ): Promise<{ crossFindings: SecurityFinding[]; reconciliation: ReconciliationResult }> {
 	const shadowingFindings = checkShadowingRules(routes);
 	const reconciliation = reconcileControllersAndRoutes(endpoints, routes);
@@ -101,7 +103,10 @@ export async function analyzeCrossFileRules(
 		...shadowingFindings,
 		...reconciliation.findings,
 		...propertiesFindings,
-	];
+	].filter(finding => {
+		const suppressions = suppressionsByFile.get(finding.file.toString()) || [];
+		return filterSuppressedFindings([finding], suppressions).length > 0;
+	});
 
 	return { crossFindings, reconciliation };
 }

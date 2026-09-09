@@ -2,6 +2,30 @@
 
 All notable changes to **Spring Security Inspector** are documented in this file.
 
+## [0.2.0] - 2026-09-10
+
+### Added
+
+#### Security analysis
+- Method-level security annotations (`@PreAuthorize`, `@Secured`, and `@RolesAllowed`) are now associated with controller endpoints during reconciliation.
+- Custom `access(...)` expressions now return an explicit **manual review required** result in the simulator instead of being treated as allowed.
+- Cross-file findings now respect inline suppressions.
+- Diagnostics are published for findings from audited `application.properties`, `application.yml`, and `application.yaml` files.
+- Maven and Gradle Spring Boot version detection accepts versions without a patch component.
+
+#### Dashboard and CI
+- Dashboard Webview protected with a Content Security Policy and nonce-based script execution.
+- Dynamic dashboard values are escaped before being rendered.
+- Dashboard interactions use CSP-compatible event listeners for simulation, tabs, filters, and exports.
+- Added SARIF export through `Spring Security: Export SARIF Report` for CI and GitHub Code Scanning integrations.
+
+### Fixed
+- Restored dashboard simulation, filtering, tab navigation, and export actions after enabling the Webview Content Security Policy.
+- Fixed configurable Java exclusion patterns so built-in and user-defined glob patterns are handled independently.
+
+### Tests
+- Expanded the test suite to 19 passing tests, including method-security reconciliation and custom-expression simulation.
+
 ## [0.1.0] - 2026-09-08
 
 ### Added

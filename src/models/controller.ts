@@ -7,6 +7,7 @@ export interface ControllerEndpoint {
 	httpMethod: HttpMethod;
 	path: string;
 	fullPath: string;
+	methodSecurity?: string;
 	file: vscode.Uri;
 	line: number;
 	column: number;

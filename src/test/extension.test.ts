@@ -315,6 +315,28 @@ suite('Spring Security Inspector Test Suite', () => {
 			const resAdminWithRole = simulateRequest('POST', '/admin/settings', ['ROLE_ADMIN'], routes);
 			assert.strictEqual(resAdminWithRole.allowed, true);
 		});
+
+		test('Returns an indeterminate verdict for custom access expressions', () => {
+			const routes = parseRoutes('.requestMatchers("/internal/**").access(customAuthorization())', mockUri);
+			const result = simulateRequest('GET', '/internal/data', ['ROLE_ADMIN'], routes);
+			assert.strictEqual(result.verdict, 'unknown');
+			assert.strictEqual(result.allowed, false);
+		});
+
+		test('Does not report method-secured endpoints as unprotected', () => {
+			const controllerCode = `
+				@RestController
+				public class AdminController {
+					@GetMapping("/admin")
+					@PreAuthorize("hasRole('ADMIN')")
+					public String admin() { return "ok"; }
+				}
+			`;
+			const endpoints = scanControllers(controllerCode, mockUri);
+			const result = reconcileControllersAndRoutes(endpoints, []);
+			assert.strictEqual(endpoints[0].methodSecurity, '@PreAuthorize("hasRole(\'ADMIN\')")');
+			assert.strictEqual(result.findings.length, 0);
+		});
 	});
 
 	suite('Advanced Rules & Suppressions', () => {

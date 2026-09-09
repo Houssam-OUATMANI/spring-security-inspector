@@ -35,9 +35,9 @@ export async function detectProject(): Promise<ProjectDetectionResult> {
 				projectDetected = true;
 
 				// Check version clues (Spring Boot 3.x uses Spring Security 6.x)
-				if (/spring-boot.*3\.\d+\.\d+/i.test(text) || /id\s*\(?["']org\.springframework\.boot["']\)?\s*version\s*["']3\./i.test(text)) {
+				if (/spring-boot[^\n]*3\.\d+(?:\.\d+)?/i.test(text) || /id\s*\(?["']org\.springframework\.boot["']\)?\s*version\s*["']3\./i.test(text)) {
 					springSecurityVersion = 'spring-security-6';
-				} else if (/spring-boot.*2\.\d+\.\d+/i.test(text) || /id\s*\(?["']org\.springframework\.boot["']\)?\s*version\s*["']2\./i.test(text)) {
+				} else if (/spring-boot[^\n]*2\.\d+(?:\.\d+)?/i.test(text) || /id\s*\(?["']org\.springframework\.boot["']\)?\s*version\s*["']2\./i.test(text)) {
 					springSecurityVersion = 'spring-security-5';
 				} else if (/spring-security.*6\.\d+/i.test(text)) {
 					springSecurityVersion = 'spring-security-6';

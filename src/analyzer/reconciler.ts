@@ -7,6 +7,8 @@ export interface ReconciliationResult {
 	endpointMatches: Map<ControllerEndpoint, SecurityRoute | null>;
 }
 
+export type SimulationVerdict = 'allow' | 'deny' | 'unknown' | 'noroute';
+
 export function reconcileControllersAndRoutes(
 	endpoints: ControllerEndpoint[],
 	routes: SecurityRoute[]
@@ -37,7 +39,7 @@ export function reconcileControllersAndRoutes(
 
 		endpointMatches.set(endpoint, matchedRoute);
 
-		if (!matchedRoute) {
+		if (!matchedRoute && !endpoint.methodSecurity) {
 			// No matcher matched at all
 			findings.push({
 				id: `unprotected-endpoint-${endpoint.file.fsPath}-${endpoint.line}`,
@@ -50,7 +52,7 @@ export function reconcileControllersAndRoutes(
 				file: endpoint.file,
 				recommendation: `Add an explicit requestMatcher for '${endpoint.fullPath}' in your SecurityFilterChain to prevent accidental exposure.`,
 			});
-		} else if (matchedRoute.accessLevel === 'permitAll' && !isExplicitPublicPath(endpoint.fullPath)) {
+		} else if (matchedRoute && matchedRoute.accessLevel === 'permitAll' && !endpoint.methodSecurity && !isExplicitPublicPath(endpoint.fullPath)) {
 			// Caught by a generic permitAll (like /**)
 			if (matchedRoute.pattern === '/**' || matchedRoute.pattern.includes('anyRequest')) {
 				findings.push({
@@ -141,6 +143,7 @@ function isExplicitPublicPath(path: string): boolean {
 
 export interface SimulationResult {
 	allowed: boolean;
+	verdict: SimulationVerdict;
 	matchedRoute: SecurityRoute | null;
 	reason: string;
 }
@@ -166,12 +169,14 @@ export function simulateRequest(
 				case 'anonymous':
 					return {
 						allowed: true,
+						verdict: 'allow',
 						matchedRoute: route,
 						reason: `Explicitly allowed by rule '${route.pattern}' (permitAll)`,
 					};
 				case 'denyAll':
 					return {
 						allowed: false,
+						verdict: 'deny',
 						matchedRoute: route,
 						reason: `Explicitly denied by rule '${route.pattern}' (denyAll)`,
 					};
@@ -180,6 +185,7 @@ export function simulateRequest(
 					const isAuthenticated = userRoles.length > 0;
 					return {
 						allowed: isAuthenticated,
+						verdict: isAuthenticated ? 'allow' : 'deny',
 						matchedRoute: route,
 						reason: isAuthenticated
 							? `Allowed: User is authenticated with roles [${userRoles.join(', ')}]`
@@ -194,6 +200,7 @@ export function simulateRequest(
 					const hasRequiredRole = requiredRoles.some(r => normalizedUserRoles.includes(r));
 					return {
 						allowed: hasRequiredRole,
+						verdict: hasRequiredRole ? 'allow' : 'deny',
 						matchedRoute: route,
 						reason: hasRequiredRole
 							? `Allowed: User has required role [${requiredRoles.join(', ')}]`
@@ -205,6 +212,7 @@ export function simulateRequest(
 					const hasAuth = requiredAuths.some(a => userRoles.includes(a));
 					return {
 						allowed: hasAuth,
+						verdict: hasAuth ? 'allow' : 'deny',
 						matchedRoute: route,
 						reason: hasAuth
 							? `Allowed: User has required authority [${requiredAuths.join(', ')}]`
@@ -212,9 +220,10 @@ export function simulateRequest(
 					};
 				default:
 					return {
-						allowed: true,
+						allowed: false,
+						verdict: 'unknown',
 						matchedRoute: route,
-						reason: `Allowed by custom condition: ${route.accessLevel}`,
+						reason: `Manual review required for custom condition: ${route.accessLevel}`,
 					};
 			}
 		}
@@ -222,6 +231,7 @@ export function simulateRequest(
 
 	return {
 		allowed: false,
+		verdict: 'noroute',
 		matchedRoute: null,
 		reason: 'No rule matched: Request denied by Spring Security default policy',
 	};

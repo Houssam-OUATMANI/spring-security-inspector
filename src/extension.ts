@@ -55,6 +55,16 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 		}
 	);
 
+	const exportSarifCommand = vscode.commands.registerCommand(
+		'spring-security-inspector.exportSarif',
+		async () => {
+			if (!SecurityDashboardPanel.currentPanel) {
+				SecurityDashboardPanel.render(context.extensionUri, latestSummary);
+			}
+			await SecurityDashboardPanel.currentPanel?.exportSarif();
+		}
+	);
+
 	const runFullScan = async (): Promise<void> => {
 		const config = vscode.workspace.getConfiguration('springSecurityInspector');
 		const isDiagnosticsEnabled = config.get<boolean>('enableDiagnostics', true);
@@ -79,8 +89,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
 		// Find Java files
 		const ignorePatterns = config.get<string[]>('ignorePatterns', ['**/test/**']);
-		const excludePattern = `**/{target,build,.gradle,node_modules,${ignorePatterns.join(',')}}/**`;
-		const javaFiles = await vscode.workspace.findFiles('**/*.java', excludePattern);
+		const builtInExcluded = ['target', 'build', '.gradle', 'node_modules'];
+		const excludePatterns = [
+			...builtInExcluded.map(pattern => `**/${pattern}/**`),
+			...ignorePatterns,
+		];
+		const javaFiles = await vscode.workspace.findFiles('**/*.java', `{${excludePatterns.join(',')}}`);
 
 		analysisCache.clear();
 
@@ -161,6 +175,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 		statusBarItem,
 		openFileCommand,
 		openDashboardCommand,
+		exportSarifCommand,
 		refreshCommand,
 		codeLensRegistration,
 		hoverRegistration,

@@ -3,7 +3,7 @@
   "displayName": "Spring Security Inspector",
   "description": "Inspect Spring Security configuration and expose authorization risks.",
   "icon": "icon.png",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "publisher": "Houssam-OUATMANI",
   "author": "Houssam OUATMANI",
   "license": "MIT",
@@ -58,6 +58,11 @@
         "command": "spring-security-inspector.openDashboard",
         "title": "Spring Security: Open Security Dashboard",
         "icon": "$(dashboard)"
+      },
+      {
+        "command": "spring-security-inspector.exportSarif",
+        "title": "Spring Security: Export SARIF Report",
+        "icon": "$(export)"
       }
     ],
     "menus": {
@@ -71,6 +76,11 @@
           "command": "spring-security-inspector.refresh",
           "when": "view == spring-security-overview",
           "group": "navigation@2"
+        },
+        {
+          "command": "spring-security-inspector.exportSarif",
+          "when": "view == spring-security-overview",
+          "group": "navigation@3"
         }
       ]
     },

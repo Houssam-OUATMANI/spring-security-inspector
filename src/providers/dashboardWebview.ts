@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { randomBytes } from 'crypto';
 import { SecuritySummary } from '../models/summary';
 import { HttpMethod } from '../models/route';
 
@@ -21,6 +22,9 @@ export class SecurityDashboardPanel {
 						break;
 					case 'exportJson':
 						await this.exportJsonReport();
+						break;
+					case 'exportSarif':
+						await this.exportSarifReport();
 						break;
 					case 'openFile':
 						if (message.file && message.line) {
@@ -65,6 +69,10 @@ export class SecurityDashboardPanel {
 		this.render();
 	}
 
+	public async exportSarif(): Promise<void> {
+		await this.exportSarifReport();
+	}
+
 	private render(): void {
 		this.panel.webview.html = this.getHtmlContent();
 	}
@@ -99,11 +107,20 @@ export class SecurityDashboardPanel {
 		void vscode.window.showInformationMessage('Security audit data exported as JSON.');
 	}
 
+	private async exportSarifReport(): Promise<void> {
+		const sarif = JSON.stringify(generateSarifReport(this.summary), null, 2);
+		const doc = await vscode.workspace.openTextDocument({ content: sarif, language: 'json' });
+		await vscode.window.showTextDocument(doc, { preview: false });
+		void vscode.window.showInformationMessage('Security audit data exported as SARIF.');
+	}
+
 	private getHtmlContent(): string {
 		const summary = this.summary;
-		const routesJson = JSON.stringify(summary.routes);
-		const endpointsJson = JSON.stringify(summary.endpoints);
-		const findingsJson = JSON.stringify(summary.findings);
+		const nonce = randomBytes(16).toString('base64');
+		const routesJson = serializeForScript(summary.routes);
+		const endpointsJson = serializeForScript(summary.endpoints);
+		const findingsJson = serializeForScript(summary.findings);
+		const componentsJson = serializeForScript(summary.components);
 
 		const errorsCount = summary.findings.filter(f => f.severity === 'error').length;
 		const warningsCount = summary.findings.filter(f => f.severity === 'warning').length;
@@ -118,6 +135,7 @@ export class SecurityDashboardPanel {
 		return `<!DOCTYPE html>
 <html lang="en">
 <head>
+	<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'nonce-${nonce}';">
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>Spring Security Dashboard</title>
@@ -435,8 +453,8 @@ export class SecurityDashboardPanel {
 		<span class="version-badge">${versionLabel}</span>
 	</div>
 	<div class="btn-group">
-		<button onclick="exportMarkdown()">📄 Markdown</button>
-		<button class="secondary" onclick="exportJson()">💾 JSON</button>
+		<button id="exportMarkdownButton">📄 Markdown</button>
+		<button class="secondary" id="exportJsonButton">💾 JSON</button>
 	</div>
 </div>
 
@@ -498,7 +516,7 @@ export class SecurityDashboardPanel {
 				<label>User Roles (comma-separated)</label>
 				<input type="text" id="simRoles" class="roles-input" placeholder="ROLE_USER, ROLE_ADMIN" value="" />
 			</div>
-			<button class="sim-btn" onclick="runSimulation()">▶ Test</button>
+			<button class="sim-btn" id="runSimulationButton">▶ Test</button>
 		</div>
 		<div id="simResult" class="sim-result"></div>
 	</div>
@@ -506,15 +524,15 @@ export class SecurityDashboardPanel {
 	<!-- TABBED CONTENT -->
 	<div class="section-card" style="padding: 0; overflow: hidden;">
 		<div class="tabs">
-			<div class="tab active" onclick="switchTab(this, 'tab-matrix')">🌐 Access Matrix</div>
-			<div class="tab" onclick="switchTab(this, 'tab-findings')">⚠️ Findings (${summary.findings.length})</div>
+			<div class="tab active" data-tab="tab-matrix">🌐 Access Matrix</div>
+			<div class="tab" data-tab="tab-findings">⚠️ Findings (${summary.findings.length})</div>
 		</div>
 
 		<!-- Matrix Tab -->
 		<div id="tab-matrix" class="tab-content active" style="padding: 16px;">
 			<div class="table-controls">
-				<input type="text" id="filterInput" placeholder="🔍  Filter by path, method, or controller..." oninput="filterTable()" />
-				<select id="accessFilter" onchange="filterTable()">
+				<input type="text" id="filterInput" placeholder="🔍  Filter by path, method, or controller..." />
+				<select id="accessFilter">
 					<option value="ALL">All Access Levels</option>
 					<option value="PUBLIC">Public (permitAll)</option>
 					<option value="AUTHENTICATED">Authenticated</option>
@@ -557,12 +575,18 @@ export class SecurityDashboardPanel {
 	</div>
 </div>
 
-<script>
+<script nonce="${nonce}">
 	const vscode = acquireVsCodeApi();
 	const routes = ${routesJson};
 	const endpoints = ${endpointsJson};
 	const findings = ${findingsJson};
-	const components = ${JSON.stringify(summary.components)};
+	const components = ${componentsJson};
+
+	function escapeHtml(value) {
+		return String(value ?? '').replace(/[&<>"']/g, function(character) {
+			return {'&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'}[character];
+		});
+	}
 
 	/* ---- TAB LOGIC ---- */
 	function switchTab(el, id) {
@@ -686,9 +710,9 @@ export class SecurityDashboardPanel {
 			}
 			// custom / access() SpEL
 			return {
-				verdict: 'allow',
+				verdict: 'unknown',
 				icon: '⚡',
-				title: 'CUSTOM RULE MATCHED',
+				title: 'MANUAL REVIEW REQUIRED',
 				message: \`Route matched a custom expression-based rule (\${al}). Manual review required.\`,
 				matchedPattern: route.pattern
 			};
@@ -720,12 +744,12 @@ export class SecurityDashboardPanel {
 		div.className = 'sim-result ' + result.verdict;
 
 		const matchHtml = result.matchedPattern
-			? \`<div class="sim-matched-rule">📌 Matched rule: <code>\${result.matchedPattern}</code></div>\`
+			? \`<div class="sim-matched-rule">📌 Matched rule: <code>\${escapeHtml(result.matchedPattern)}</code></div>\`
 			: \`<div class="sim-matched-rule" style="color:var(--muted)">No explicit matcher found</div>\`;
 
 		div.innerHTML = \`
-			<div class="sim-verdict">\${result.icon} \${result.title}</div>
-			<div class="sim-detail">\${result.message}</div>
+			<div class="sim-verdict">\${escapeHtml(result.icon)} \${escapeHtml(result.title)}</div>
+			<div class="sim-detail">\${escapeHtml(result.message)}</div>
 			\${matchHtml}
 		\`;
 	}
@@ -791,11 +815,11 @@ export class SecurityDashboardPanel {
 			tr.setAttribute('data-access', al);
 			tr.innerHTML = \`
 				<td>\${getMethodBadge(item.httpMethod)}</td>
-				<td class="path-cell">\${item.fullPath}</td>
-				<td style="color:var(--muted);font-size:12px">\${item.controllerClass}\${item.methodName ? '::' + item.methodName + '()' : ''}</td>
-				<td><code>\${matched ? matched.pattern : 'none'}</code></td>
+				<td class="path-cell">\${escapeHtml(item.fullPath)}</td>
+				<td style="color:var(--muted);font-size:12px">\${escapeHtml(item.controllerClass)}\${item.methodName ? '::' + escapeHtml(item.methodName) + '()' : ''}</td>
+				<td><code>\${escapeHtml(matched ? matched.pattern : 'none')}</code></td>
 				<td><span class="access-badge \${badgeClass}">\${badgeText}</span></td>
-				<td style="font-size:12px;color:var(--muted)">\${reqs}</td>
+				<td style="font-size:12px;color:var(--muted)">\${escapeHtml(reqs)}</td>
 			\`;
 			tbody.appendChild(tr);
 		}
@@ -813,7 +837,7 @@ export class SecurityDashboardPanel {
 			let matchesA = true;
 			if (af === 'PUBLIC') matchesA = access === 'permitAll' || access === 'anonymous';
 			else if (af === 'AUTHENTICATED') matchesA = ['authenticated','fullyAuthenticated','rememberMe'].includes(access);
-			else if (af === 'ROLE') matchesA = access.includes('Role') || access.includes('Authority');
+			else if (af === 'ROLE') matchesA = access.includes('Role') || access.includes('Authority') || access.toLowerCase().includes('role') || access.toLowerCase().includes('authority');
 			else if (af === 'DENY') matchesA = access === 'denyAll';
 			else if (af === 'UNMATCHED') matchesA = access === 'unmatched';
 			const show = matchesQ && matchesA;
@@ -843,10 +867,10 @@ export class SecurityDashboardPanel {
 			tr.className = 'finding-row-' + f.severity;
 			tr.innerHTML = \`
 				<td><span class="\${sevClass}">\${sevIcon} \${f.severity.toUpperCase()}</span></td>
-				<td><code style="font-size:11px">\${f.ruleId}</code></td>
-				<td><code style="font-size:11px;color:var(--muted)">\${f.cweId || '—'}</code></td>
-				<td style="max-width:380px">\${f.message}</td>
-				<td style="font-size:11px;color:var(--muted);white-space:nowrap">\${fname}:\${f.line}</td>
+				<td><code style="font-size:11px">\${escapeHtml(f.ruleId)}</code></td>
+				<td><code style="font-size:11px;color:var(--muted)">\${escapeHtml(f.cweId || '—')}</code></td>
+				<td style="max-width:380px">\${escapeHtml(f.message)}</td>
+				<td style="font-size:11px;color:var(--muted);white-space:nowrap">\${escapeHtml(fname)}:\${f.line}</td>
 			\`;
 			tbody.appendChild(tr);
 		}
@@ -854,6 +878,16 @@ export class SecurityDashboardPanel {
 
 	function exportMarkdown() { vscode.postMessage({ command: 'exportMarkdown' }); }
 	function exportJson() { vscode.postMessage({ command: 'exportJson' }); }
+	function exportSarif() { vscode.postMessage({ command: 'exportSarif' }); }
+
+	document.getElementById('exportMarkdownButton').addEventListener('click', exportMarkdown);
+	document.getElementById('exportJsonButton').addEventListener('click', exportJson);
+	document.getElementById('runSimulationButton').addEventListener('click', runSimulation);
+	document.getElementById('filterInput').addEventListener('input', filterTable);
+	document.getElementById('accessFilter').addEventListener('change', filterTable);
+	document.querySelectorAll('.tab').forEach(tab => {
+		tab.addEventListener('click', () => switchTab(tab, tab.dataset.tab));
+	});
 
 	renderMatrix();
 	renderFindings();
@@ -909,4 +943,42 @@ function generateMarkdownReport(summary: SecuritySummary): string {
 	}
 
 	return lines.join('\n');
+}
+
+function serializeForScript(value: unknown): string {
+	return JSON.stringify(value)
+		.replace(/</g, '\\u003c')
+		.replace(/>/g, '\\u003e')
+		.replace(/&/g, '\\u0026')
+		.replace(/\u2028/g, '\\u2028')
+		.replace(/\u2029/g, '\\u2029');
+}
+
+function generateSarifReport(summary: SecuritySummary): object {
+	return {
+		version: '2.1.0',
+		$schema: 'https://json.schemastore.org/sarif-2.1.0.json',
+		runs: [{
+			tool: {
+				driver: {
+					name: 'Spring Security Inspector',
+					informationUri: 'https://github.com/Houssam-OUATMANI/spring-security-inspector',
+					rules: summary.findings.map(finding => ({
+						id: finding.ruleId,
+						shortDescription: { text: finding.message },
+						properties: finding.cweId ? { cwe: finding.cweId } : undefined,
+					})),
+				},
+			},
+			results: summary.findings.map(finding => ({
+				ruleId: finding.ruleId,
+				level: finding.severity === 'error' ? 'error' : finding.severity === 'warning' ? 'warning' : 'note',
+				message: { text: finding.message },
+				locations: [{ physicalLocation: {
+					artifactLocation: { uri: finding.file.toString() },
+					region: { startLine: finding.line, startColumn: finding.column || 1 },
+				} }],
+			})),
+		}],
+	};
 }
